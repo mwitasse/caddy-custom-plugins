@@ -1,7 +1,7 @@
 # Build arguments (global scope)
 ARG CADDY_VERSION=2.10.0
 
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Re-declare ARG for this stage
 ARG CADDY_VERSION
@@ -55,7 +55,7 @@ EOF
 RUN cat > go.mod << EOF
 module caddy-custom
 
-go 1.21
+go 1.24
 
 require (
     github.com/caddyserver/caddy/v2 v${CADDY_VERSION}
