@@ -51,16 +51,24 @@ func main() {
 }
 EOF
 
-# Get Caddy core and plugins
-RUN go get github.com/caddyserver/caddy/v2 v${CADDY_VERSION}
-RUN go get github.com/caddy-dns/netcup@latest
-RUN go get github.com/caddy-dns/duckdns@latest
-RUN go get github.com/mholt/caddy-dynamicdns@latest
-RUN go get github.com/lucaslorentz/caddy-docker-proxy/v2@latest
-RUN go get github.com/acouvreur/sablier@latest
-RUN go get github.com/greenpau/caddy-security@latest
-RUN go get github.com/corazawaf/coraza-caddy/v2@latest
-RUN go get github.com/porech/caddy-maxmind-geolocation@latest
+# Create go.mod with specific Caddy version and plugins
+RUN cat > go.mod << EOF
+module caddy-custom
+
+go 1.21
+
+require (
+    github.com/caddyserver/caddy/v2 v${CADDY_VERSION}
+    github.com/caddy-dns/netcup v1.1.0
+    github.com/caddy-dns/duckdns v1.1.0
+    github.com/mholt/caddy-dynamicdns v1.2.0
+    github.com/lucaslorentz/caddy-docker-proxy/v2 v2.9.1
+    github.com/acouvreur/sablier v1.7.0
+    github.com/greenpau/caddy-security v1.1.27
+    github.com/corazawaf/coraza-caddy/v2 v2.0.1
+    github.com/porech/caddy-maxmind-geolocation v1.4.0
+)
+EOF
 
 # Tidy dependencies
 RUN go mod tidy
