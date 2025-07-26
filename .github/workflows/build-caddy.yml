@@ -57,7 +57,7 @@ jobs:
             fi
           else
             # Get latest version from GitHub API
-            LATEST_VERSION=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | jq -r '.tag_name')
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | jq -r '.tag_name' | sed 's/^v//')
             echo "caddy_version=${LATEST_VERSION}" >> $GITHUB_OUTPUT
             echo "image_tag=${LATEST_VERSION}" >> $GITHUB_OUTPUT
           fi
@@ -65,7 +65,7 @@ jobs:
           # Check if image already exists
           CADDY_VERSION=$(echo "$GITHUB_OUTPUT" | grep caddy_version | cut -d'=' -f2)
           if [ -z "$CADDY_VERSION" ]; then
-            CADDY_VERSION=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | jq -r '.tag_name')
+            CADDY_VERSION=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | jq -r '.tag_name' | sed 's/^v//')
             echo "caddy_version=${CADDY_VERSION}" >> $GITHUB_OUTPUT
             echo "image_tag=${CADDY_VERSION}" >> $GITHUB_OUTPUT
           fi
