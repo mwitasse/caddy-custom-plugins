@@ -7,7 +7,6 @@ This repository automatically builds Docker images based on the **official Caddy
 - **netcup** - DNS provider for netcup
 - **duckdns** - DNS provider for DuckDNS  
 - **ddns** - Dynamic DNS updates
-- **dockerproxy** - Docker container proxy
 - **sablier** - Dynamic container management
 - **defender** - Security/Rate limiting (via caddy-security)
 - **coraza-waf** - Web Application Firewall
@@ -103,19 +102,6 @@ subdomain.duckdns.org {
 }
 ```
 
-#### With Docker Proxy
-```
-:80 {
-    reverse_proxy {
-        to docker_proxy:2375
-        header_up Host {host}
-        header_up X-Real-IP {remote}
-        header_up X-Forwarded-For {remote}
-        header_up X-Forwarded-Proto {scheme}
-    }
-}
-```
-
 #### With Sablier (Dynamic Scaling)
 ```
 app.example.com {
@@ -181,7 +167,6 @@ For issues:
 - [Caddy netcup DNS](https://github.com/caddy-dns/netcup)
 - [Caddy DuckDNS](https://github.com/caddy-dns/duckdns)
 - [Dynamic DNS](https://github.com/mholt/caddy-dynamicdns)
-- [Docker Proxy](https://github.com/lucaslorentz/caddy-docker-proxy)
 - [Sablier](https://github.com/acouvreur/sablier)  
 - [Caddy Security](https://github.com/greenpau/caddy-security)
 - [Coraza WAF](https://github.com/corazawaf/coraza-caddy)

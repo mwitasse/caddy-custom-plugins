@@ -33,9 +33,6 @@ import (
     // Dynamic DNS Plugin
     _ "github.com/mholt/caddy-dynamicdns"
 
-    // Docker Proxy Plugin
-    _ "github.com/lucaslorentz/caddy-docker-proxy/v2/plugin"
-
     // Sablier Plugin (Dynamic Container Management)
     _ "github.com/acouvreur/sablier/plugins/caddy"
 
@@ -77,12 +74,12 @@ RUN caddy version && caddy list-modules --versions
 
 # Labels for image metadata
 LABEL org.opencontainers.image.title="Caddy with Custom Plugins" \
-      org.opencontainers.image.description="Official Caddy ${CADDY_VERSION} image with netcup, duckdns, ddns, dockerproxy, sablier, defender, coraza-waf, and geoip-filter plugins" \
+      org.opencontainers.image.description="Official Caddy ${CADDY_VERSION} image with netcup, duckdns, ddns, sablier, defender, coraza-waf, and geoip-filter plugins" \
       org.opencontainers.image.vendor="Custom Build" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.source="https://github.com/caddyserver/caddy" \
       caddy.version="${CADDY_VERSION}" \
-      caddy.plugins="netcup,duckdns,ddns,dockerproxy,sablier,defender,coraza-waf,geoip-filter"
+      caddy.plugins="netcup,duckdns,ddns,sablier,defender,coraza-waf,geoip-filter"
 
 # The rest is inherited from the official Caddy image:
 # - USER caddy  
