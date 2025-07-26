@@ -52,7 +52,7 @@ func main() {
 EOF
 
 # Get Caddy core and plugins
-RUN go get github.com/caddyserver/caddy/v2@v${CADDY_VERSION}
+RUN go get github.com/caddyserver/caddy/v2 v${CADDY_VERSION}
 RUN go get github.com/caddy-dns/netcup@latest
 RUN go get github.com/caddy-dns/duckdns@latest
 RUN go get github.com/mholt/caddy-dynamicdns@latest
