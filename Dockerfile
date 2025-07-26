@@ -59,14 +59,14 @@ go 1.24
 
 require (
     github.com/caddyserver/caddy/v2 v${CADDY_VERSION}
-    github.com/caddy-dns/netcup v1.1.0
-    github.com/caddy-dns/duckdns v1.1.0
-    github.com/mholt/caddy-dynamicdns v1.2.0
-    github.com/lucaslorentz/caddy-docker-proxy/v2 v2.9.1
-    github.com/acouvreur/sablier v1.7.0
-    github.com/greenpau/caddy-security v1.1.27
-    github.com/corazawaf/coraza-caddy/v2 v2.0.1
-    github.com/porech/caddy-maxmind-geolocation v1.4.0
+    github.com/caddy-dns/netcup@latest
+    github.com/caddy-dns/duckdns@latest
+    github.com/mholt/caddy-dynamicdns@latest
+    github.com/lucaslorentz/caddy-docker-proxy/v2@latest
+    github.com/acouvreur/sablier@latest
+    github.com/greenpau/caddy-security@latest
+    github.com/corazawaf/coraza-caddy/v2@latest
+    github.com/porech/caddy-maxmind-geolocation@latest
 )
 EOF
 
@@ -74,7 +74,7 @@ EOF
 RUN go mod tidy
 
 # Build custom Caddy
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} go build \
+RUN CGO_ENABLED=0 GOOS=linux go build \
     -a -ldflags="-s -w -X github.com/caddyserver/caddy/v2.CustomVersion=custom-plugins" \
     -trimpath \
     -o caddy \
