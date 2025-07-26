@@ -1,0 +1,160 @@
+name: Build Caddy with Custom Plugins
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      caddy_version:
+        description: 'Caddy Version (leave empty for latest)'
+        required: false
+        default: ''
+      force_rebuild:
+        description: 'Force rebuild even if image exists'
+        required: false
+        default: 'false'
+        type: boolean
+
+  # Automatically check for new Caddy releases
+  schedule:
+    # Daily at 06:00 UTC
+    - cron: '0 6 * * *'
+
+  # On push to main branch (for Dockerfile changes)
+  push:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/caddy-custom
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.version_check.outputs.should_build }}
+      caddy_version: ${{ steps.version_check.outputs.caddy_version }}
+      image_tag: ${{ steps.version_check.outputs.image_tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Caddy version and decide if build is needed
+        id: version_check
+        run: |
+          # If manually triggered with specific version
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.caddy_version }}" ]; then
+            CADDY_VERSION="${{ github.event.inputs.caddy_version }}"
+            echo "caddy_version=${CADDY_VERSION}" >> $GITHUB_OUTPUT
+            echo "image_tag=${CADDY_VERSION}" >> $GITHUB_OUTPUT
+            
+            if [ "${{ github.event.inputs.force_rebuild }}" = "true" ]; then
+              echo "should_build=true" >> $GITHUB_OUTPUT
+              echo "Force rebuild requested"
+              exit 0
+            fi
+          else
+            # Get latest version from GitHub API
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | jq -r '.tag_name')
+            echo "caddy_version=${LATEST_VERSION}" >> $GITHUB_OUTPUT
+            echo "image_tag=${LATEST_VERSION}" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if image already exists
+          CADDY_VERSION=$(echo "$GITHUB_OUTPUT" | grep caddy_version | cut -d'=' -f2)
+          if [ -z "$CADDY_VERSION" ]; then
+            CADDY_VERSION=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | jq -r '.tag_name')
+            echo "caddy_version=${CADDY_VERSION}" >> $GITHUB_OUTPUT
+            echo "image_tag=${CADDY_VERSION}" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if image exists in registry
+          TOKEN=$(echo ${{ secrets.GITHUB_TOKEN }} | base64)
+          IMAGE_EXISTS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/v2/${{ github.repository }}/caddy-custom/manifests/${CADDY_VERSION}" \
+            -o /dev/null -w "%{http_code}")
+
+          if [ "$IMAGE_EXISTS" = "200" ] && [ "${{ github.event.inputs.force_rebuild }}" != "true" ]; then
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "Image for version ${CADDY_VERSION} already exists"
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Building new image for version ${CADDY_VERSION}"
+          fi
+
+  build-and-push:
+    needs: check-version
+    if: needs.check-version.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ needs.check-version.outputs.caddy_version }}
+            type=raw,value=latest
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            CADDY_VERSION=${{ needs.check-version.outputs.caddy_version }}
+            TARGETARCH=amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate build summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Caddy Version:** ${{ needs.check-version.outputs.caddy_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-version.outputs.caddy_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "- **Plugins:** netcup, duckdns, ddns, dockerproxy, sablier, defender, coraza-waf, geoip-filter" >> $GITHUB_STEP_SUMMARY
+
+  security-scan:
+    needs: [check-version, build-and-push]
+    if: needs.check-version.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-version.outputs.caddy_version }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'

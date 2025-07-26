@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: ghcr.io/mwitasse/caddy-custom-plugins/caddy-custom:latest
+    container_name: caddy
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/data:/data
+      - ./caddy/config:/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro # For docker proxy plugin
+    environment:
+      # DNS Provider credentials
+      - NETCUP_API_KEY=${NETCUP_API_KEY}
+      - NETCUP_API_PASSWORD=${NETCUP_API_PASSWORD}  
+      - NETCUP_CUSTOMER_NUMBER=${NETCUP_CUSTOMER_NUMBER}
+      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN}
+      
+      # Dynamic DNS settings
+      - DDNS_DOMAIN=${DDNS_DOMAIN}
+      - DDNS_INTERVAL=5m
+      
+      # Caddy admin settings
+      - CADDY_ADMIN=0.0.0.0:2019
+    networks:
+      - caddy_network
+    labels:
+      # For docker proxy plugin
+      - caddy_controlled_server
+
+  # Example backend service
+  whoami:
+    image: traefik/whoami
+    container_name: whoami
+    restart: unless-stopped
+    networks:
+      - caddy_network
+    labels:
+      - caddy=whoami.localhost
+      - caddy.reverse_proxy={{upstreams 80}}
+      - caddy.tls=internal
+
+  # Example app with Sablier dynamic scaling  
+  nginx-app:
+    image: nginx:alpine
+    container_name: nginx-app
+    restart: unless-stopped
+    networks:
+      - caddy_network
+    labels:
+      - sablier.enable=true
+      - sablier.group=nginx-group
+
+networks:
+  caddy_network:
+    external: false
+
+volumes:
+  caddy_data:
+    external: true
+  caddy_config:
