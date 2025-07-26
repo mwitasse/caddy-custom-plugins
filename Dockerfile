@@ -1,7 +1,7 @@
 FROM golang:1.21-alpine AS builder
 
 # Build arguments
-ARG CADDY_VERSION=v2.10.0
+ARG CADDY_VERSION=2.10.0
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates
@@ -70,7 +70,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} go build \
     .
 
 # Runtime stage - use official Caddy image as base
-ARG CADDY_VERSION=v2.10.0
+ARG CADDY_VERSION=2.10.0
 FROM caddy:${CADDY_VERSION}-alpine
 
 # Copy custom Caddy binary over the official one
