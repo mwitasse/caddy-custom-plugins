@@ -2,7 +2,7 @@
 ARG CADDY_VERSION=2.10.0
 
 # Builder stage
-FROM golang:1.24-alpine AS builder
+FROM golang:latest AS builder
 
 # Re-declare ARG for this stage
 ARG CADDY_VERSION
