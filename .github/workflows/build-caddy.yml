@@ -185,7 +185,7 @@ jobs:
           echo "- **Caddy Version:** ${{ needs.check-version.outputs.caddy_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-version.outputs.caddy_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
-          echo "- **Description:** Dynamic description with version and module info extracted from built image" >> $GITHUB_STEP_SUMMARY
+          echo "- **Plugins:** netcup, duckdns, ddns, dockerproxy, sablier, defender, coraza-waf, geoip-filter" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Caddy Info:" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

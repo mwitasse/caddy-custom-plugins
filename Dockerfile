@@ -1,5 +1,5 @@
 # Build arguments (global scope)
-ARG CADDY_VERSION=2.10.0
+ARG CADDY_VERSION=builder
 
 # Builder stage
 FROM golang:alpine AS builder
