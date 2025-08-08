@@ -116,19 +116,68 @@ jobs:
             type=raw,value=latest
             type=sha,prefix={{branch}}-
 
-      - name: Build and push Docker image
+      - name: Build temporary image for version extraction
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          build-args: |
+            CADDY_VERSION=${{ needs.check-version.outputs.caddy_version }}
+          push: false
+          tags: temp-caddy:latest
+          load: true
+
+      - name: Extract Caddy version and modules information
+        id: caddy-info
+        run: |
+          echo "Extracting Caddy information from built image..."
+          
+          # Run the caddy commands in the built image and capture the raw output
+          CADDY_OUTPUT=$(docker run --rm temp-caddy:latest sh -c "caddy version && caddy list-modules --versions" 2>&1)
+          
+          # Clean up the output (remove any ANSI color codes, trailing spaces)
+          CLEAN_OUTPUT=$(echo "$CADDY_OUTPUT" | sed 's/\x1b\[[0-9;]*m//g' | sed 's/[[:space:]]*$//')
+          
+          # Store the full output for reference and debugging
+          echo "$CLEAN_OUTPUT" > caddy-info.txt
+          
+          # Show first few lines for debugging
+          echo "=== Caddy Version and Modules Output ==="
+          echo "$CLEAN_OUTPUT" | head -10
+          echo "========================================"
+          
+          # Use multiline output format for GitHub Actions
+          {
+            echo 'description<<EOF'
+            echo "$CLEAN_OUTPUT"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+          
+          echo "Caddy info extracted successfully"
+
+      - name: Build and push final image with dynamic description
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           build-args: |
             CADDY_VERSION=${{ needs.check-version.outputs.caddy_version }}
-            TARGETARCH=amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.description=${{ steps.caddy-info.outputs.description }}
+            org.opencontainers.image.title=Custom Caddy with Plugins
+            caddy.version=${{ needs.check-version.outputs.caddy_version }}
+
+      - name: Clean up temporary image
+        run: docker rmi temp-caddy:latest
+
+      - name: Upload Caddy info artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: caddy-info-${{ needs.check-version.outputs.caddy_version }}
+          path: caddy-info.txt
 
       - name: Generate build summary
         run: |
@@ -136,7 +185,12 @@ jobs:
           echo "- **Caddy Version:** ${{ needs.check-version.outputs.caddy_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-version.outputs.caddy_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
-          echo "- **Plugins:** netcup, duckdns, ddns, dockerproxy, sablier, defender, coraza-waf, geoip-filter" >> $GITHUB_STEP_SUMMARY
+          echo "- **Description:** Dynamic description with version and module info extracted from built image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Caddy Info:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -20 caddy-info.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   security-scan:
     needs: [check-version, build-and-push]

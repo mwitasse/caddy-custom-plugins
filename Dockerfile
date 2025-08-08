@@ -72,14 +72,12 @@ COPY --from=builder /build/caddy /usr/bin/caddy
 # Verify the custom binary works and show loaded plugins
 RUN caddy version && caddy list-modules --versions
 
-# Labels for image metadata
+# Labels for image metadata (description will be set dynamically by GitHub Actions)
 LABEL org.opencontainers.image.title="Caddy with Custom Plugins" \
-      org.opencontainers.image.description="Official Caddy ${CADDY_VERSION} image with netcup, duckdns, ddns, sablier, defender, coraza-waf, and geoip-filter plugins" \
       org.opencontainers.image.vendor="Custom Build" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.source="https://github.com/caddyserver/caddy" \
-      caddy.version="${CADDY_VERSION}" \
-      caddy.plugins="netcup,duckdns,ddns,sablier,defender,coraza-waf,geoip-filter"
+      caddy.version="${CADDY_VERSION}"
 
 # The rest is inherited from the official Caddy image:
 # - USER caddy  
